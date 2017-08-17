@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<JUCERPROJECT id="v1YL6X" name="compressor2" displaySplashScreen="1" reportAppUsage="1"
+              splashScreenColour="Dark" projectType="audioplug" version="1.0.0"
+              bundleIdentifier="com.yourcompany.compressor2" includeBinaryInAppConfig="1"
+              cppLanguageStandard="14" buildVST="1" buildVST3="1" buildAU="1"
+              buildAUv3="1" buildRTAS="0" buildAAX="0" buildStandalone="1"
+              enableIAA="0" pluginName="compressor2" pluginDesc="compressor2"
+              pluginManufacturer="Seaberg" pluginManufacturerCode="Manu" pluginCode="V1yl"
+              pluginChannelConfigs="" pluginIsSynth="0" pluginWantsMidiIn="0"
+              pluginProducesMidiOut="0" pluginIsMidiEffectPlugin="0" pluginEditorRequiresKeys="0"
+              pluginAUExportPrefix="compressor2AU" pluginRTASCategory="" aaxIdentifier="com.yourcompany.compressor2"
+              pluginAAXCategory="AAX_ePlugInCategory_Dynamics" jucerVersion="5.1.1"
+              companyName="seaberg plugins">
+  <MAINGROUP id="aCzZOO" name="compressor2">
+    <GROUP id="{918081EA-2A2C-99CF-8FFD-82879DFD3C0B}" name="Source">
+      <FILE id="DHDcO8" name="MeterComponent.h" compile="0" resource="0"
+            file="Source/MeterComponent.h"/>
+      <FILE id="a8EUaQ" name="PluginProcessor.cpp" compile="1" resource="0"
+            file="Source/PluginProcessor.cpp"/>
+      <FILE id="cp0vQr" name="PluginProcessor.h" compile="0" resource="0"
+            file="Source/PluginProcessor.h"/>
+      <FILE id="ImLDVS" name="PluginEditor.cpp" compile="1" resource="0"
+            file="Source/PluginEditor.cpp"/>
+      <FILE id="d3wqZR" name="PluginEditor.h" compile="0" resource="0" file="Source/PluginEditor.h"/>
+    </GROUP>
+  </MAINGROUP>
+  <EXPORTFORMATS>
+    <XCODE_MAC targetFolder="Builds/MacOSX">
+      <CONFIGURATIONS>
+        <CONFIGURATION name="Debug" isDebug="1" optimisation="1" targetName="compressor2"/>
+        <CONFIGURATION name="Release" isDebug="0" optimisation="3" targetName="compressor2"/>
+      </CONFIGURATIONS>
+      <MODULEPATHS>
+        <MODULEPATH id="juce_core" path="../frameworks/JUCE/modules"/>
+        <MODULEPATH id="juce_events" path="../frameworks/JUCE/modules"/>
+        <MODULEPATH id="juce_graphics" path="../frameworks/JUCE/modules"/>
+        <MODULEPATH id="juce_data_structures" path="../frameworks/JUCE/modules"/>
+        <MODULEPATH id="juce_gui_basics" path="../frameworks/JUCE/modules"/>
+        <MODULEPATH id="juce_gui_extra" path="../frameworks/JUCE/modules"/>
+        <MODULEPATH id="juce_cryptography" path="../frameworks/JUCE/modules"/>
+        <MODULEPATH id="juce_video" path="../frameworks/JUCE/modules"/>
+        <MODULEPATH id="juce_opengl" path="../frameworks/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_basics" path="../frameworks/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_devices" path="../frameworks/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_formats" path="../frameworks/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_processors" path="../frameworks/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_plugin_client" path="../frameworks/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_utils" path="../frameworks/JUCE/modules"/>
+        <MODULEPATH id="juce_dsp" path="../frameworks/JUCE/modules"/>
+      </MODULEPATHS>
+    </XCODE_MAC>
+  </EXPORTFORMATS>
+  <MODULES>
+    <MODULE id="juce_audio_basics" showAllCode="1" useLocalCopy="1" useGlobalPath="1"/>
+    <MODULE id="juce_audio_devices" showAllCode="1" useLocalCopy="1" useGlobalPath="1"/>
+    <MODULE id="juce_audio_formats" showAllCode="1" useLocalCopy="1" useGlobalPath="1"/>
+    <MODULE id="juce_audio_plugin_client" showAllCode="1" useLocalCopy="1"
+            useGlobalPath="1"/>
+    <MODULE id="juce_audio_processors" showAllCode="1" useLocalCopy="1" useGlobalPath="1"/>
+    <MODULE id="juce_audio_utils" showAllCode="1" useLocalCopy="1" useGlobalPath="1"/>
+    <MODULE id="juce_core" showAllCode="1" useLocalCopy="1" useGlobalPath="1"/>
+    <MODULE id="juce_cryptography" showAllCode="1" useLocalCopy="1" useGlobalPath="1"/>
+    <MODULE id="juce_data_structures" showAllCode="1" useLocalCopy="1" useGlobalPath="1"/>
+    <MODULE id="juce_dsp" showAllCode="1" useLocalCopy="1" useGlobalPath="1"/>
+    <MODULE id="juce_events" showAllCode="1" useLocalCopy="1" useGlobalPath="1"/>
+    <MODULE id="juce_graphics" showAllCode="1" useLocalCopy="1" useGlobalPath="1"/>
+    <MODULE id="juce_gui_basics" showAllCode="1" useLocalCopy="1" useGlobalPath="1"/>
+    <MODULE id="juce_gui_extra" showAllCode="1" useLocalCopy="1" useGlobalPath="1"/>
+    <MODULE id="juce_opengl" showAllCode="1" useLocalCopy="1" useGlobalPath="1"/>
+    <MODULE id="juce_video" showAllCode="1" useLocalCopy="1" useGlobalPath="1"/>
+  </MODULES>
+  <JUCEOPTIONS JUCE_QUICKTIME="disabled"/>
+</JUCERPROJECT>

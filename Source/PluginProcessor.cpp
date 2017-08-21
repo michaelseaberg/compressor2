@@ -25,8 +25,8 @@ Compressor2AudioProcessor::Compressor2AudioProcessor()
                        )
 #endif
 {
-    currentLevel = new Value(var(0));
-    
+    currentLevel[0] = new Value(var(0));
+    currentLevel[1] = new Value(var(0));
 }
 
 Compressor2AudioProcessor::~Compressor2AudioProcessor()
@@ -158,7 +158,7 @@ void Compressor2AudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuf
             if((bufferTempValue = linTodB(channelData[i])) > bufferMaxValue)
                 bufferMaxValue = bufferTempValue;
         }
-        currentLevel->setValue(bufferMaxValue);
+        currentLevel[channel].setValue(bufferMaxValue);
 
     }
 }

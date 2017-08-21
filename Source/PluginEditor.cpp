@@ -19,7 +19,7 @@ Compressor2AudioProcessorEditor::Compressor2AudioProcessorEditor (Compressor2Aud
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
     setSize (400, 300);
-    myVolume = new MeterComponent(p.getVolumeLevel());
+    myVolume = new MeterComponent(p.getVolumeLevel(),2,0,0,100,240,60);
     //myVolume->centreWithSize(100, 240);
     myVolume->setCentrePosition(200, 150);
     addAndMakeVisible(myVolume);

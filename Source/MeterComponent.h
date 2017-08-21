@@ -16,13 +16,19 @@
 /*
 */
 class MeterComponent    : public Component,
-                            public Value::Listener
+                        public Value::Listener
 {
 public:
-    MeterComponent(Value* levelToShow)
+    MeterComponent(Value* levelToShow,int channels, int xLoc, int yLoc, int width, int height, int dBrange)
     {
         myLevel = levelToShow;
-        this->setSize(100, 240);
+        myNumChannels = channels;
+        myX = xLoc;
+        myY = yLoc;
+        myWidth = width;
+        myHeight = height;
+        myRange = dBrange;
+        this->setSize(myWidth, myHeight);
         myLevel->addListener(this);
 
     }
@@ -35,11 +41,8 @@ public:
 
     void paint (Graphics& g) override
     {
-        //g.fillAll (getLookAndFeel().findColour (ResizableWindow::backgroundColourId));   // clear the backgroun
-        g.setColour (Colour(94,94,94));
-        g.drawRect (getLocalBounds(), 1);   // draw an outline around the component
         g.setFont (14.0f);
-        drawMeters(20,20,60,200,60,2,1,g);
+        drawMeters(g);
         
     }
 
@@ -54,17 +57,23 @@ public:
 
 private:
     Value* myLevel;
+    int myNumChannels;
+    int myX;
+    int myY;
+    int myWidth;
+    int myHeight;
+    int myRange;
     
-    void drawMeters(int x, int y, int width, int height, int range, int channels, int orientation, Graphics& graphics){
+    void drawMeters(Graphics& graphics){
         graphics.setColour (Colour(132, 132, 132));
-        graphics.fillRect(x, y, width, height);
+        graphics.fillRect(myX, myY, myWidth, myHeight);
         graphics.setColour (Colour(137,244,66));
         int loudness;
-        for(int i=0; i<channels; i++){
-            loudness=(int) myLevel->getValue();
-            graphics.drawText("Level: "+String(loudness)+" dB",2,222,96,20,Justification(36),true);
-            if(loudness>(-range))
-                graphics.fillRect(((x+7)+(i)*(((width-14-(3*(channels-1)))/channels)+3)), y+height, ((width-14-(3*(channels-1)))/channels), -height-(loudness*(height/range)));
+        for(int i=0; i<myNumChannels; i++){
+            loudness=(int) myLevel[i].getValue();
+            //graphics.drawText("Level: "+String(loudness)+" dB",2,222,96,20,Justification(36),true);
+            if(loudness>(-myRange))
+                graphics.fillRect(((myX+7)+(i)*(((myWidth-14-(3*(myNumChannels-1)))/myNumChannels)+3)), myY+myHeight, ((myWidth-14-(3*(myNumChannels-1)))/myNumChannels), -myHeight-(loudness*(myHeight/myRange)));
         }
     }
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MeterComponent)

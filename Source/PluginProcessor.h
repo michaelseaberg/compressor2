@@ -60,7 +60,8 @@ public:
 private:
     //AudioParameterFloat* currentLevel;
     //float* currentLevel;
-    Value* currentLevel;
+    Value currentLevel[2];
+    //Value* currentLevel[2];
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Compressor2AudioProcessor)
 };

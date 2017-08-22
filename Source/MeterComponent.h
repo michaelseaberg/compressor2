@@ -43,8 +43,6 @@ public:
         for(int i=0;i<myNumChannels;i++){
             myLevel->operator[](i)->addListener(this);
         }
-        
-        
     }
     
     ~MeterComponent()
@@ -86,7 +84,7 @@ private:
         int loudness;
         for(int i=0; i<myNumChannels; i++){
             loudness=(int) myLevel->operator[](i)->getValue();
-            graphics.drawText("Level: "+String(loudness)+" dB",2,60,96,20,Justification(36),true);
+            //graphics.drawText("Level: "+String(loudness)+" dB",2,60,96,20,Justification(36),true);
             if(loudness>(-myRange))
                 graphics.fillRect(getMeterX(i), getMeterY(),getMeterWidth(),getMeterHeight(loudness));
             else

@@ -32,6 +32,7 @@ public:
    #endif
 
     void processBlock (AudioSampleBuffer&, MidiBuffer&) override;
+    void reset() override;
 
     //==============================================================================
     AudioProcessorEditor* createEditor() override;
@@ -56,7 +57,6 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
     OwnedArray<Value>* getVolumeLevel();
     const float* currentSamples;
-    int samplesInBlock; //refactor
     
 
 private:
@@ -67,7 +67,6 @@ private:
     AudioParameterFloat* attackTime;
     AudioParameterFloat* releaseTime;
     AudioParameterChoice* ratio;
-    AudioParameterFloat* inputGain;
     //intermediate values
     float currentSample;
     float gainComputerOut;
@@ -78,13 +77,16 @@ private:
     float attackConstant;
     float releaseConstant;
     float inputGainLinear;
-    float previousSamples[2]; //need to be able to store previous samples for two channels //TODO:REFACTOR TO ACCOMODATE STEREO
+    float previousSamples[2]; //need to be able to store previous samples for two channels //TODO:REFACTOR TO ACCOMODATE MORE THAN STEREO
     const String ratios[4] = {String("2"),String("4"),String("6"),String("8")};
 
-    
+    float gainStage(float inputSample);
     
     //metering
     OwnedArray<Value>* currentLevel;  //Pointer to value to be used as an array of values with set number of channels
+    
+    dsp::ProcessorDuplicator<dsp::IIR::Filter<float>, dsp::IIR::Coefficients<float>> lowPassFilter;
+    
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Compressor2AudioProcessor)
 };

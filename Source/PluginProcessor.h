@@ -55,11 +55,7 @@ public:
     void getStateInformation (MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
     Value* getVolumeLevel();
-    
     const float* currentSamples;
-    const float* reductionSamples;
-    bool isAudioPlaying();
-    bool isProcessorBypassed();
     int samplesInBlock; //refactor
     
 
@@ -72,21 +68,23 @@ private:
     AudioParameterFloat* releaseTime;
     AudioParameterChoice* ratio;
     AudioParameterFloat* inputGain;
+    //intermediate values
     float currentSample;
-    float previousSample;
     float gainComputerOut;
     float levelDetectorOut;
     float controlSignal;
     float computedSample;
+    //
     float attackConstant;
     float releaseConstant;
     float inputGainLinear;
+    float previousSamples[2]; //need to be able to store previous samples for two channels //TODO:REFACTOR TO ACCOMODATE STEREO
     const String ratios[4] = {String("2"),String("4"),String("6"),String("8")};
 
     
     
     //metering
-    Value currentLevel[2];
+    Value currentLevel[2];  //TODO:INVESTIGATE HOW THIS IS FUNCTIONING
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Compressor2AudioProcessor)
 };

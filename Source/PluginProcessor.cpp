@@ -58,9 +58,11 @@ Compressor2AudioProcessor::Compressor2AudioProcessor()
                                                    ratioTextArray,
                                                    0));
     
+    
     //initialize metering object to zero
     currentLevel[0] = new Value(var(0));
     currentLevel[1] = new Value(var(0));
+    
 }
 
 Compressor2AudioProcessor::~Compressor2AudioProcessor()
@@ -168,7 +170,8 @@ void Compressor2AudioProcessor::prepareToPlay (double sampleRate, int samplesPer
 {
     samplesInBlock = samplesPerBlock;
     currentSample = 0;
-    previousSample = 0;
+    previousSamples[0] = 0;
+    previousSamples[1] = 0;
     gainComputerOut = 0;
     levelDetectorOut = 0;
     controlSignal = 0;
@@ -237,7 +240,6 @@ void Compressor2AudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuf
         
         for(int sample=0; sample < buffer.getNumSamples(); ++sample){
             currentSample = channelData[sample];
-            
             //take channelData and treat as "data"-one sample. Increment the pointer when time to process next sample
             controlSignal = currentSample;
             //linear to DB conversion
@@ -248,8 +250,8 @@ void Compressor2AudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuf
             //dBToLin(controlSignal);
             
             //level detection
-            levelDetectorOut = computeLevelDetection(controlSignal,previousSample,attackConstant,releaseConstant);
-            previousSample = levelDetectorOut;
+            levelDetectorOut = computeLevelDetection(controlSignal,previousSamples[channel],attackConstant,releaseConstant);
+            previousSamples[channel] = levelDetectorOut;
             controlSignal = (currentGain)-levelDetectorOut;
             //send control signal reduction to meter
             currentLevel[channel].setValue(controlSignal);

@@ -57,16 +57,23 @@ Compressor2AudioProcessor::Compressor2AudioProcessor()
                                                    "Ratio",
                                                    ratioTextArray,
                                                    0));
+    //OwnedArray<Value> tempArray;
+//    for(int i=0; i<getTotalNumInputChannels(); i++){
+//        tempArray.add(new Value(var(0)));
+//    }
+    //currentLevel = *tempArray.begin(); //{Value(var(0))};
     
+    currentLevel = new OwnedArray<Value>;
+    for(int i=0; i<getTotalNumInputChannels(); i++){
+        currentLevel->add(new Value(var(0)));
+    }
     
-    //initialize metering object to zero
-    currentLevel[0] = new Value(var(0));
-    currentLevel[1] = new Value(var(0));
     
 }
 
 Compressor2AudioProcessor::~Compressor2AudioProcessor()
 {
+    //delete[] currentLevel;
 }
 
 //Class Methods
@@ -252,33 +259,23 @@ void Compressor2AudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuf
             //level detection
             levelDetectorOut = computeLevelDetection(controlSignal,previousSamples[channel],attackConstant,releaseConstant);
             previousSamples[channel] = levelDetectorOut;
-            controlSignal = (currentGain)-levelDetectorOut;
             //send control signal reduction to meter
-            currentLevel[channel].setValue(controlSignal);
+            currentLevel->operator[](channel)->setValue(levelDetectorOut);
+            //Compute control signal from applied gain and level detector signal
+            controlSignal = (currentGain)-levelDetectorOut;
             //db to linear conversion
             dBToLin(controlSignal);
             //set sample to equal new sample
             computedSample = currentSample*controlSignal;
             channelData[sample] = computedSample;
-            
         }
-
-    
-//        //metering code
-//        float bufferMaxValue = -121;
-//        float bufferTempValue = -121;
-//        for(int i=0; i<buffer.getNumSamples(); i++){
-//            if((bufferTempValue = linTodB2(channelData[i])) > bufferMaxValue)
-//                bufferMaxValue = bufferTempValue;
-//        }
-        //currentLevel[channel].setValue(bufferMaxValue);
-
     }
 }
 
 //Getters and Setters
 //==============================================================================
-Value* Compressor2AudioProcessor::getVolumeLevel(){
+OwnedArray<Value>* Compressor2AudioProcessor::getVolumeLevel(){
+    //initialize metering object to zero
     return currentLevel;
 }
 

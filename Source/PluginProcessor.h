@@ -54,7 +54,7 @@ public:
     //==============================================================================
     void getStateInformation (MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
-    Value* getVolumeLevel();
+    OwnedArray<Value>* getVolumeLevel();
     const float* currentSamples;
     int samplesInBlock; //refactor
     
@@ -84,7 +84,7 @@ private:
     
     
     //metering
-    Value currentLevel[2];  //TODO:INVESTIGATE HOW THIS IS FUNCTIONING
+    OwnedArray<Value>* currentLevel;  //Pointer to value to be used as an array of values with set number of channels
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Compressor2AudioProcessor)
 };

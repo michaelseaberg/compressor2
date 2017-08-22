@@ -36,8 +36,8 @@ Compressor2AudioProcessorEditor::Compressor2AudioProcessorEditor (Compressor2Aud
     }
     
     //Create gain meter
-    myVolume = new MeterComponent(p.getVolumeLevel(),2,0,0,100,240,60);
-    //myVolume->setCentrePosition(200, 150);
+    myVolume = new MeterComponent(p.getVolumeLevel(),0,0,100,180,20);
+    myVolume->setCentrePosition(200, 100);
     addAndMakeVisible(myVolume);
 }
 

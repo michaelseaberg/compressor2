@@ -11,7 +11,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-
+//Constructors
 //==============================================================================
 Compressor2AudioProcessor::Compressor2AudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -25,6 +25,40 @@ Compressor2AudioProcessor::Compressor2AudioProcessor()
                        )
 #endif
 {
+    
+    StringArray ratioTextArray = StringArray(&ratios[0],4);
+    //Create Parameters
+    addParameter (inputGain = new AudioParameterFloat ("inG",
+                                                       "Input Gain (dB)",
+                                                       0,
+                                                       30,
+                                                       0));
+    addParameter (threshold = new AudioParameterFloat ("t", // parameterID
+                                                       "Threshold", // parameter name
+                                                       -60,   // mininum value
+                                                       0,   // maximum value
+                                                       0)); // default value
+    addParameter (attackTime = new AudioParameterFloat ("aT", // parameterID
+                                                        "Attack Time (ms)", // parameter name
+                                                        5,   // mininum value
+                                                        100,   // maximum value
+                                                        5)); // default value
+    addParameter (releaseTime = new AudioParameterFloat ("rT", // parameterID
+                                                         "Release Time (ms)", // parameter name
+                                                         10,   // mininum value
+                                                         1000,   // maximum value
+                                                         10)); // default value
+    addParameter (makeupGain = new AudioParameterFloat ("g", // parameterID
+                                                        "Makeup Gain", // parameter name
+                                                        -10,   // mininum value
+                                                        30,   // maximum value
+                                                        0)); // default value
+    addParameter (ratio = new AudioParameterChoice("r",
+                                                   "Ratio",
+                                                   ratioTextArray,
+                                                   0));
+    
+    //initialize metering object to zero
     currentLevel[0] = new Value(var(0));
     currentLevel[1] = new Value(var(0));
 }
@@ -33,6 +67,7 @@ Compressor2AudioProcessor::~Compressor2AudioProcessor()
 {
 }
 
+//Class Methods
 //==============================================================================
 const String Compressor2AudioProcessor::getName() const
 {
@@ -86,9 +121,60 @@ void Compressor2AudioProcessor::changeProgramName (int index, const String& newN
 {
 }
 
+//Helper Methods
+//==============================================================================
+float linTodB2(float& sample){
+    float temp = fabsf(sample);
+    if(temp < 0.000001)
+        return -120;
+    else
+        return 20*log10(fabsf(sample));
+}
+
+float computeConstant(float time, double sampleRate){
+    return exp(-1/((time*.001)*sampleRate));
+}
+
+void linTodB(float& sample){
+    float temp = fabsf(sample);
+    if(temp < 0.000001)
+        sample = -120;
+    else
+        sample = 20*log10(fabsf(sample));
+}
+
+void dBToLin(float& sample){
+    sample = powf(10,(sample/20));
+}
+
+//why can I not access threshold or values from inside helper methods-private objects
+float computeGainCorrection(float sample, float thresholdValue, float ratioValue){
+    if(sample <= thresholdValue)
+        return sample;
+    else
+        return thresholdValue+((sample-thresholdValue)/ratioValue);
+}
+
+float computeLevelDetection(float sample, float previousSample, float attackConstant, float releaseConstant){
+    if (sample>previousSample)
+        return (attackConstant*previousSample)+((1-attackConstant)*sample);
+    else
+        return (releaseConstant*previousSample)+((1-releaseConstant)*sample);
+}
+
+//Processing Methods
 //==============================================================================
 void Compressor2AudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
+    samplesInBlock = samplesPerBlock;
+    currentSample = 0;
+    previousSample = 0;
+    gainComputerOut = 0;
+    levelDetectorOut = 0;
+    controlSignal = 0;
+    computedSample = 0;
+    attackConstant = 0;
+    releaseConstant = 0;
     
 }
 
@@ -122,21 +208,17 @@ bool Compressor2AudioProcessor::isBusesLayoutSupported (const BusesLayout& layou
 }
 #endif
 
-
-float linTodB(float& sample){
-    float temp = fabsf(sample);
-    if(temp < 0.000001)
-        return -120;
-    else
-        return 20*log10(fabsf(sample));
-}
-
-
-
 void Compressor2AudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuffer& midiMessages)
 {
     const int totalNumInputChannels  = getTotalNumInputChannels();
     const int totalNumOutputChannels = getTotalNumOutputChannels();
+    
+    attackConstant = computeConstant(attackTime->get(),this->getSampleRate());
+    releaseConstant = computeConstant(releaseTime->get(),this->getSampleRate());
+    inputGainLinear = powf(10.0f, ((inputGain->get())/20.0f));
+    float currentThreshold = threshold->get();
+    float currentRatio = (ratio->getCurrentChoiceName()).getFloatValue();
+    float currentGain = makeupGain->get();
 
     // In case we have more outputs than inputs, this code clears any output
     // channels that didn't contain input data, (because these aren't
@@ -152,21 +234,53 @@ void Compressor2AudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuf
     for (int channel = 0; channel < totalNumInputChannels; ++channel)
     {
         float* channelData = buffer.getWritePointer (channel);
-        float bufferMaxValue = -121;
-        float bufferTempValue = -121;
-        for(int i=0; i<buffer.getNumSamples(); i++){
-            if((bufferTempValue = linTodB(channelData[i])) > bufferMaxValue)
-                bufferMaxValue = bufferTempValue;
+        
+        for(int sample=0; sample < buffer.getNumSamples(); ++sample){
+            currentSample = channelData[sample];
+            
+            //take channelData and treat as "data"-one sample. Increment the pointer when time to process next sample
+            controlSignal = currentSample;
+            //linear to DB conversion
+            linTodB(controlSignal);
+            //gain computing
+            gainComputerOut = computeGainCorrection(controlSignal,currentThreshold,currentRatio);
+            controlSignal = controlSignal-gainComputerOut;
+            //dBToLin(controlSignal);
+            
+            //level detection
+            levelDetectorOut = computeLevelDetection(controlSignal,previousSample,attackConstant,releaseConstant);
+            previousSample = levelDetectorOut;
+            controlSignal = (currentGain)-levelDetectorOut;
+            //send control signal reduction to meter
+            currentLevel[channel].setValue(controlSignal);
+            //db to linear conversion
+            dBToLin(controlSignal);
+            //set sample to equal new sample
+            computedSample = currentSample*controlSignal;
+            channelData[sample] = computedSample;
+            
         }
-        currentLevel[channel].setValue(bufferMaxValue);
+
+    
+//        //metering code
+//        float bufferMaxValue = -121;
+//        float bufferTempValue = -121;
+//        for(int i=0; i<buffer.getNumSamples(); i++){
+//            if((bufferTempValue = linTodB2(channelData[i])) > bufferMaxValue)
+//                bufferMaxValue = bufferTempValue;
+//        }
+        //currentLevel[channel].setValue(bufferMaxValue);
 
     }
 }
 
+//Getters and Setters
+//==============================================================================
 Value* Compressor2AudioProcessor::getVolumeLevel(){
     return currentLevel;
 }
 
+//Editor Methods
 //==============================================================================
 bool Compressor2AudioProcessor::hasEditor() const
 {
@@ -178,6 +292,7 @@ AudioProcessorEditor* Compressor2AudioProcessor::createEditor()
     return new Compressor2AudioProcessorEditor (*this);
 }
 
+//State Methods
 //==============================================================================
 void Compressor2AudioProcessor::getStateInformation (MemoryBlock& destData)
 {
@@ -193,6 +308,8 @@ void Compressor2AudioProcessor::setStateInformation (const void* data, int sizeI
 }
 
 //==============================================================================
+
+
 // This creates new instances of the plugin..
 AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {

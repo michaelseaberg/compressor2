@@ -16,7 +16,7 @@
 /*
 */
 class MeterComponent    : public Component,
-                        public Value::Listener
+                        private Value::Listener
 {
 public:
     MeterComponent(Value* levelToShow,int channels, int xLoc, int yLoc, int width, int height, int dBrange)
@@ -37,8 +37,6 @@ public:
     {
     }
     
-    
-
     void paint (Graphics& g) override
     {
         g.setFont (14.0f);
@@ -68,6 +66,7 @@ private:
         graphics.setColour (Colour(132, 132, 132));
         graphics.fillRect(myX, myY, myWidth, myHeight);
         graphics.setColour (Colour(137,244,66));
+        
         int loudness;
         for(int i=0; i<myNumChannels; i++){
             loudness=(int) myLevel[i].getValue();

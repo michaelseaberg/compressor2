@@ -56,12 +56,37 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
     Value* getVolumeLevel();
     
+    const float* currentSamples;
+    const float* reductionSamples;
+    bool isAudioPlaying();
+    bool isProcessorBypassed();
+    int samplesInBlock; //refactor
+    
 
 private:
-    //AudioParameterFloat* currentLevel;
-    //float* currentLevel;
+    //==============================================================================
+    //declare all parameters here
+    AudioParameterFloat* makeupGain;
+    AudioParameterFloat* threshold;
+    AudioParameterFloat* attackTime;
+    AudioParameterFloat* releaseTime;
+    AudioParameterChoice* ratio;
+    AudioParameterFloat* inputGain;
+    float currentSample;
+    float previousSample;
+    float gainComputerOut;
+    float levelDetectorOut;
+    float controlSignal;
+    float computedSample;
+    float attackConstant;
+    float releaseConstant;
+    float inputGainLinear;
+    const String ratios[4] = {String("2"),String("4"),String("6"),String("8")};
+
+    
+    
+    //metering
     Value currentLevel[2];
-    //Value* currentLevel[2];
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Compressor2AudioProcessor)
 };

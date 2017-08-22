@@ -18,7 +18,9 @@
 //==============================================================================
 /**
 */
-class Compressor2AudioProcessorEditor  : public AudioProcessorEditor
+class Compressor2AudioProcessorEditor  : public AudioProcessorEditor,
+                                        private Slider::Listener,
+                                            private Button::Listener
 {
 public:
     Compressor2AudioProcessorEditor (Compressor2AudioProcessor&);
@@ -29,11 +31,27 @@ public:
     void resized() override;
 
 private:
-    Image myBackgroundImage;
-    // This reference is provided as a quick way for your editor to
-    // access the processor object that created it.
     Compressor2AudioProcessor& processor;
+    const int width = 560;
+    const int height = 390;
+    
+    Image myBackgroundImage;
+    
     MeterComponent* myVolume;
+    
+    void sliderValueChanged (Slider* slider) override;
+    void sliderDragStarted (Slider* slider) override;
+    void sliderDragEnded (Slider* slider) override;
+    void buttonClicked (Button* button) override;
+    void buttonStateChanged (Button* button) override;
+    AudioParameterFloat* getParameterForSlider(Slider* slider);
+    
+    void createControl(const AudioProcessorParameterWithID* parameter, int parameterNumber);
+    void createWaveform();
+    
+    OwnedArray<Slider> parameterSliders;
+    OwnedArray<Button> ratioButtons;
+
     
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Compressor2AudioProcessorEditor)

@@ -16,36 +16,38 @@
 Compressor2AudioProcessor::Compressor2AudioProcessor()
      : AudioProcessor (BusesProperties()
                        .withInput  ("Input",  AudioChannelSet::stereo(), true)
-                       .withOutput ("Output", AudioChannelSet::stereo(), true)),
-        lowPassFilter(dsp::IIR::Coefficients<float>::makeFirstOrderLowPass  (48000.0, 20000.f))
+                       .withOutput ("Output", AudioChannelSet::stereo(), true))
+
 {
     
-    StringArray ratioTextArray = StringArray(&ratios[0],4);
     //Create Parameters
-    addParameter (threshold = new AudioParameterFloat ("t", // parameterID
+    addParameter (ratio = new AudioParameterFloat ("ratio", // parameterID
+                                                   "Ratio", // parameter name
+                                                   2,   // mininum value
+                                                   8,   // maximum value
+                                                   2)); // default value
+    addParameter (threshold = new AudioParameterFloat ("threshold", // parameterID
                                                        "Threshold", // parameter name
                                                        -60,   // mininum value
                                                        0,   // maximum value
                                                        0)); // default value
-    addParameter (attackTime = new AudioParameterFloat ("aT", // parameterID
+    addParameter (attackTime = new AudioParameterFloat ("attack", // parameterID
                                                         "Attack Time (ms)", // parameter name
                                                         5,   // mininum value
                                                         100,   // maximum value
                                                         5)); // default value
-    addParameter (releaseTime = new AudioParameterFloat ("rT", // parameterID
+    addParameter (releaseTime = new AudioParameterFloat ("release", // parameterID
                                                          "Release Time (ms)", // parameter name
                                                          10,   // mininum value
                                                          1000,   // maximum value
                                                          10)); // default value
-    addParameter (makeupGain = new AudioParameterFloat ("g", // parameterID
+    addParameter (tone = new AudioParameterFloat("tone","Tone",0,2,0));
+    addParameter (makeupGain = new AudioParameterFloat ("gain", // parameterID
                                                         "Makeup Gain", // parameter name
                                                         -10,   // mininum value
                                                         30,   // maximum value
                                                         0)); // default value
-    addParameter (ratio = new AudioParameterChoice("r",
-                                                   "Ratio",
-                                                   ratioTextArray,
-                                                   0));
+    
 
     //metering initialization
     currentLevel = new OwnedArray<Value>;
@@ -197,16 +199,19 @@ void Compressor2AudioProcessor::prepareToPlay (double sampleRate, int samplesPer
     attackConstant = 0;
     releaseConstant = 0;
     
+    
+    
     //Setup lowpass filter 
     auto channels = static_cast<uint32> (jmin (getMainBusNumInputChannels(), getMainBusNumOutputChannels()));
-    dsp::ProcessSpec spec { sampleRate, static_cast<uint32> (samplesPerBlock), channels };
-    lowPassFilter.prepare (spec);
+    dsp::ProcessSpec spec { sampleRate, static_cast<uint32> (samplesPerBlock), channels};
+    fir.state = dsp::FilterDesign<float>::designFIRLowpassWindowMethod (20000.0f, spec.sampleRate, 21, dsp::WindowingFunction<float>::blackman);
+    fir.prepare(spec);
     
 }
 
 void Compressor2AudioProcessor::reset()
 {
-    lowPassFilter.reset();
+    fir.reset();
 }
 
 void Compressor2AudioProcessor::releaseResources()
@@ -248,7 +253,7 @@ void Compressor2AudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuf
     releaseConstant = computeConstant(releaseTime->get(),this->getSampleRate());
     //inputGainLinear = powf(10.0f, ((inputGain->get())/20.0f));
     float currentThreshold = threshold->get();
-    float currentRatio = (ratio->getCurrentChoiceName()).getFloatValue();
+    float currentRatio = ratio->get();
     float currentGain = makeupGain->get();
 
     // In case we have more outputs than inputs, this code clears any output
@@ -260,51 +265,70 @@ void Compressor2AudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuf
     for (int i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
-
-//    for (int channel = 0; channel < totalNumInputChannels; ++channel)
-//    {
-//        float* channelData = buffer.getWritePointer (channel);
-//        
-//        for(int sample=0; sample < buffer.getNumSamples(); ++sample){
-//            currentSample = channelData[sample];
-//            //take channelData and treat as "data"-one sample. Increment the pointer when time to process next sample
-//            controlSignal = currentSample;
-//            //linear to DB conversion
-//            linTodB(controlSignal);
-//            //gain computing
-//            gainComputerOut = computeGainCorrection(controlSignal,currentThreshold,currentRatio);
-//            controlSignal = controlSignal-gainComputerOut;
-//            //dBToLin(controlSignal);
-//            
-//            //level detection
-//            levelDetectorOut = computeLevelDetection(controlSignal,previousSamples[channel],attackConstant,releaseConstant);
-//            previousSamples[channel] = levelDetectorOut;
-//            //send control signal reduction to meter
-//            currentLevel->operator[](channel)->setValue(levelDetectorOut);
-//            //Compute control signal from applied gain and level detector signal
-//            controlSignal = (currentGain)-levelDetectorOut;
-//            //db to linear conversion
-//            dBToLin(controlSignal);
-//            //set sample to equal new sample
-//            computedSample = currentSample*controlSignal;
-//            channelData[sample] = computedSample;
-//        }
-//    }
-    
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
-    {
-        float* channelData = buffer.getWritePointer (channel);
-        
-        for(int sample=0; sample < buffer.getNumSamples(); ++sample){
-                channelData[sample] = gainStage(channelData[sample]);
-            
+    switch ((int) tone->get()) {
+        case 0:
+        {
+            for (int channel = 0; channel < totalNumInputChannels; ++channel)
+            {
+                float* channelData = buffer.getWritePointer (channel);
+                
+                for(int sample=0; sample < buffer.getNumSamples(); ++sample){
+                    currentSample = channelData[sample];
+                    //take channelData and treat as "data"-one sample. Increment the pointer when time to process next sample
+                    controlSignal = currentSample;
+                    //linear to DB conversion
+                    linTodB(controlSignal);
+                    //gain computing
+                    gainComputerOut = computeGainCorrection(controlSignal,currentThreshold,currentRatio);
+                    controlSignal = controlSignal-gainComputerOut;
+                    //dBToLin(controlSignal);
+                    
+                    //level detection
+                    levelDetectorOut = computeLevelDetection(controlSignal,previousSamples[channel],attackConstant,releaseConstant);
+                    previousSamples[channel] = levelDetectorOut;
+                    //send control signal reduction to meter
+                    currentLevel->operator[](channel)->setValue(levelDetectorOut);
+                    //Compute control signal from applied gain and level detector signal
+                    controlSignal = (currentGain)-levelDetectorOut;
+                    //db to linear conversion
+                    dBToLin(controlSignal);
+                    //set sample to equal new sample
+                    computedSample = currentSample*controlSignal;
+                    channelData[sample] = computedSample;
+                }
+            }
+            break;
         }
+            
+        case 1:
+        {
+            AudioSampleBuffer resampleBuffer;
+            resampleBuffer.setSize (getTotalNumInputChannels(), buffer.getNumSamples() * 4);
+            for (int channel = 0; channel < totalNumInputChannels; ++channel)
+            {
+                LagrangeInterpolator* overSampler = new LagrangeInterpolator();
+                float* resampleWriter = resampleBuffer.getWritePointer(channel);
+                float* channelData = buffer.getWritePointer (channel);
+                
+                overSampler->process(0.25, channelData, resampleWriter, buffer.getNumSamples()*4);
+                
+                for(int sample=0; sample < buffer.getNumSamples(); ++sample){
+                    channelData[sample] = gainStage(channelData[sample]);
+                    
+                }
+            }
+            break;
+        }
+            
+        case 2:
+            break;
+        default:
+            break;
     }
-
     
     //Post Processing Low Pass Filter
     dsp::AudioBlock<float> block (buffer);
-    lowPassFilter.process (dsp::ProcessContextReplacing<float> (block));
+    //fir.process (dsp::ProcessContextReplacing<float> (block));
 }
 
 //Getters and Setters

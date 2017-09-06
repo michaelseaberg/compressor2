@@ -66,7 +66,8 @@ private:
     AudioParameterFloat* threshold;
     AudioParameterFloat* attackTime;
     AudioParameterFloat* releaseTime;
-    AudioParameterChoice* ratio;
+    AudioParameterFloat* ratio;
+    AudioParameterFloat* tone;
     //intermediate values
     float currentSample;
     float gainComputerOut;
@@ -78,14 +79,14 @@ private:
     float releaseConstant;
     float inputGainLinear;
     float previousSamples[2]; //need to be able to store previous samples for two channels //TODO:REFACTOR TO ACCOMODATE MORE THAN STEREO
-    const String ratios[4] = {String("2"),String("4"),String("6"),String("8")};
+    //const String tones[3] = {String("Off"),String("1"),String("2")};
 
     float gainStage(float inputSample);
     
     //metering
     OwnedArray<Value>* currentLevel;  //Pointer to value to be used as an array of values with set number of channels
     
-    dsp::ProcessorDuplicator<dsp::IIR::Filter<float>, dsp::IIR::Coefficients<float>> lowPassFilter;
+    dsp::ProcessorDuplicator<dsp::FIR::Filter<float>, dsp::FIR::Coefficients<float>> fir;
     
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Compressor2AudioProcessor)

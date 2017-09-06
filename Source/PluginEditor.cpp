@@ -23,7 +23,6 @@ Compressor2AudioProcessorEditor::Compressor2AudioProcessorEditor (Compressor2Aud
     File f = File("/Users/michaelseaberg/Documents/development/plugins/compressor2/Source/gkbluepropic.png");
     myBackgroundImage = ImageFileFormat::loadFrom(f);
     
-    
     //Import processor parameters for automatic slider creation.
     const OwnedArray<AudioProcessorParameter>& params = processor.getParameters();
     for (int i = 0; i < params.size(); ++i)
@@ -35,10 +34,18 @@ Compressor2AudioProcessorEditor::Compressor2AudioProcessorEditor (Compressor2Aud
         }
     }
     
-    //Create gain meter
-    myVolume = new MeterComponent(p.getVolumeLevel(),0,0,100,180,20);
-    myVolume->setCentrePosition(200, 100);
-    addAndMakeVisible(myVolume);
+    //Create reduction meter
+    myReductionLevel = new MeterComponent(p.getVolumeLevel(),80,208,20);
+    myReductionLevel->setBounds((width/2)+columnSpacing,parameterOffset,meterWidth,meterHeight);
+    addAndMakeVisible(myReductionLevel);
+    
+    //Create output meter
+    //TODO:IMPLEMENT OUTPUT
+    myOutputLevel = new MeterComponent(p.getVolumeLevel(),80,208,20);
+    myOutputLevel->setBounds((width/2)+columnSpacing,parameterOffset+meterHeight+parameterPadding,meterWidth,meterHeight);
+    addAndMakeVisible(myOutputLevel);
+    
+    
 }
 
 Compressor2AudioProcessorEditor::~Compressor2AudioProcessorEditor()
@@ -58,78 +65,82 @@ void Compressor2AudioProcessorEditor::resized()
 
 void Compressor2AudioProcessorEditor::createControl(const AudioProcessorParameterWithID* parameter, int parameterNumber){
     
-    if(parameter->paramID == "r"){
-        //choice parameter-want buttons
-        AudioParameterChoice* choiceParam = (AudioParameterChoice*) parameter;
-        for(int i=0; i< choiceParam->choices.size(); i++){
-            Button* newButton;
-            ratioButtons.add(newButton = new TextButton (choiceParam->choices[i]));
-            //newButton->setButtonText(choiceParam->name);
-            newButton->setClickingTogglesState(true);
-            newButton->setRadioGroupId(1);
-            newButton->addListener(this);
-            if(i==0){
-                newButton->setConnectedEdges(2);
-                Label* ratioLabel;
-                ratioLabel = new Label(String("ratioLabel"), String("Ratio: "));
-                //ratioLabel->setText(String("Ratio Setting"), dontSendNotification);
-                ratioLabel->setBounds(0, 330, 50, 30);
-                ratioLabel->attachToComponent(newButton, true);
-                addAndMakeVisible(ratioLabel);
-            }
-            else if (i==3)
-                newButton->setConnectedEdges(1);
-            else
-                newButton->setConnectedEdges(3);
-            newButton->setBounds(70+(i*112.5), 331, 112.5, 40);
-            addAndMakeVisible(newButton);
+    //set size variables, can be customized per parameter in switch statement
+    int parameterX = parameterOffset;
+    int parameterY = parameterOffset+(parameterNumber*(parameterSize+labelHeight+parameterPadding));
+    int parameterWidth = parameterSize;
+    int parameterHeight = parameterSize;
+    
+    //generic initialization
+    Slider* newSlider;
+    AudioParameterFloat* floatParam = (AudioParameterFloat*) parameter;
+    parameterSliders.add (newSlider = new Slider (parameter->name));
+    newSlider->setSliderStyle(Slider::RotaryHorizontalVerticalDrag);
+    newSlider->setTextBoxStyle(Slider::NoTextBox, true, 100,0);
+    newSlider->setPopupDisplayEnabled (true, this);
+    newSlider->setValue (*floatParam);
+    newSlider->setDoubleClickReturnValue(true, parameter->getDefaultValue());
+    
+    switch (parameterNumber) {
+        case 0:
+        {
+           //ratio parameter
+            newSlider->setRange (floatParam->range.start, floatParam->range.end,2);
+            break;
         }
-        
-        
+        case 1:
+        {
+            //threshold parameter
+            newSlider->setRange (floatParam->range.start, floatParam->range.end,1);
+            break;
+        }
+        case 2:
+        {
+            //attack parameter
+            newSlider->setRange (floatParam->range.start, floatParam->range.end,1);
+            newSlider->setSkewFactor(0.7);
+            break;
+        }
+        case 3:
+        {
+            //release parameter
+            newSlider->setRange (floatParam->range.start, floatParam->range.end,1);
+            newSlider->setSkewFactor(0.7);
+            break;
+        }
+        case 4:
+        {
+            //tone parameter
+            newSlider->setSliderStyle(Slider::LinearHorizontal);
+            newSlider->setRange(floatParam->range.start,floatParam->range.end,1);
+            parameterX = parameterX-(toneSliderOffset/2);
+            parameterWidth = parameterWidth+toneSliderOffset;
+            parameterHeight = parameterHeight-toneSliderOffset;
+            break;
+        }
+        case 5:
+        {
+            //makeupGain parameter
+            newSlider->setRange (floatParam->range.start, floatParam->range.end,1);
+            parameterX = (width/2)+columnSpacing;
+            parameterY = parameterY-(parameterSize+labelHeight+parameterPadding)-toneSliderOffset;
+            break;
+        }
+        default:
+            break;
     }
-    else{
-        //float parameter-want knob
-        AudioParameterFloat* floatParam = (AudioParameterFloat*) parameter;
-        Slider* newSlider;
-        parameterSliders.add (newSlider = new Slider (floatParam->name));
-        newSlider->setSliderStyle(Slider::RotaryHorizontalVerticalDrag);
-        newSlider->setRange (floatParam->range.start, floatParam->range.end,1);
-        //TODO: Create new Slider Label that gives Parameter: Value Unit
-        newSlider->setTextBoxStyle(Slider::NoTextBox, true, 100,0);
-        
-        
-        //newSlider->setTextValueSuffix(" :"+ floatParam->name);
-        newSlider->setPopupDisplayEnabled (true, this);
-        newSlider->setValue (*floatParam);
-        newSlider->addListener (this);
-        newSlider->setBounds(30+(parameterNumber*100), 220, 100, 80);
-        addAndMakeVisible (newSlider);
-        
-        Label* sliderLabel;
-        sliderLabel = new Label(floatParam->paramID, floatParam->name);
-        sliderLabel->setBounds(30+(parameterNumber*100), 301, 100, 29);
-        sliderLabel->setJustificationType(Justification::centred);
-        addAndMakeVisible(sliderLabel);
-        
-    }
+    
+    newSlider->setBounds(parameterX, parameterY, parameterWidth, parameterHeight);
+    newSlider->addListener (this);
+    addAndMakeVisible (newSlider);
+    
+    Label* sliderLabel;
+    sliderLabel = new Label(parameter->paramID, parameter->name);
+    sliderLabel->setBounds(labelOffset+parameterX-parameterOffset,parameterY+parameterHeight,labelWidth, labelHeight);
+    sliderLabel->setJustificationType(Justification::centred);
+    addAndMakeVisible(sliderLabel);
     
 }
-void Compressor2AudioProcessorEditor::buttonClicked (Button* button){
-    //listener callback for button click
-    
-    //button->setState(juce::ArrowButton::buttonDown);
-    
-    
-}
-void Compressor2AudioProcessorEditor::buttonStateChanged (Button* button){
-    //if button is clicked and was not previously selected then pass new ratio value-ratio parameter is added 6th, array index 5
-    const OwnedArray<AudioProcessorParameter>& params = getAudioProcessor()->getParameters();
-    
-    if(AudioParameterChoice* param = dynamic_cast<AudioParameterChoice*> (params[5]))
-        if(button->getState() == juce::TextButton::buttonDown)
-            *param = ratioButtons.indexOf(button);
-}
-
 
 void Compressor2AudioProcessorEditor::sliderValueChanged (Slider* slider)
 {

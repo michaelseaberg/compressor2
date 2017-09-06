@@ -9,13 +9,27 @@
             shouldBeEnabled = "Yes"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
-            filePath = "../../Source/PluginProcessor.cpp"
-            timestampString = "525123320.06263"
+            filePath = "../../Source/PluginEditor.h"
+            timestampString = "525365798.581719"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "67"
-            endingLineNumber = "67"
-            landmarkName = "Compressor2AudioProcessor::Compressor2AudioProcessor()"
+            startingLineNumber = "41"
+            endingLineNumber = "41">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../../Source/PluginProcessor.cpp"
+            timestampString = "525380157.582462"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "310"
+            endingLineNumber = "310"
+            landmarkName = "Compressor2AudioProcessor::processBlock (AudioSampleBuffer&amp; buffer, MidiBuffer&amp; midiMessages)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>

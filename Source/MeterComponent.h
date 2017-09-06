@@ -30,12 +30,10 @@ class MeterComponent    : public Component,
 private Value::Listener
 {
 public:
-    MeterComponent(OwnedArray<Value>* levelToShow, int xLoc, int yLoc, int width, int height, int dBrange)
+    MeterComponent(OwnedArray<Value>* levelToShow, int width, int height, int dBrange)
     {
         myLevel = levelToShow;
         myNumChannels = levelToShow->size();
-        myX = xLoc;
-        myY = yLoc;
         myWidth = width;
         myHeight = height;
         myRange = dBrange;
@@ -53,6 +51,7 @@ public:
     {
         g.setFont (14.0f);
         drawMeters(g);
+
         
     }
     
@@ -68,8 +67,8 @@ public:
 private:
     OwnedArray<Value>* myLevel;
     int myNumChannels;
-    int myX;
-    int myY;
+    const int myX = 0;
+    const int myY = 0;
     int myWidth;
     int myHeight;
     int myRange;
@@ -80,7 +79,7 @@ private:
         graphics.setColour (Colour(132, 132, 132));
         graphics.fillRect(myX, myY, myWidth, myHeight);
         graphics.setColour (Colour(137,244,66));
-        
+      
         int loudness;
         for(int i=0; i<myNumChannels; i++){
             loudness=(int) myLevel->operator[](i)->getValue();

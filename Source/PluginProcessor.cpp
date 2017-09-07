@@ -20,6 +20,8 @@ Compressor2AudioProcessor::Compressor2AudioProcessor()
 
 {
     
+    
+    
     //Create Parameters
     addParameter (ratio = new AudioParameterFloat ("ratio", // parameterID
                                                    "Ratio", // parameter name
@@ -199,19 +201,15 @@ void Compressor2AudioProcessor::prepareToPlay (double sampleRate, int samplesPer
     attackConstant = 0;
     releaseConstant = 0;
     
-    
-    
-    //Setup lowpass filter 
+    //Setup post processing filter
     auto channels = static_cast<uint32> (jmin (getMainBusNumInputChannels(), getMainBusNumOutputChannels()));
-    dsp::ProcessSpec spec { sampleRate, static_cast<uint32> (samplesPerBlock), channels};
-    fir.state = dsp::FilterDesign<float>::designFIRLowpassWindowMethod (20000.0f, spec.sampleRate, 21, dsp::WindowingFunction<float>::blackman);
-    fir.prepare(spec);
+    globalSpec.operator=({sampleRate, static_cast<uint32> (samplesPerBlock), channels});
     
 }
 
 void Compressor2AudioProcessor::reset()
 {
-    fir.reset();
+    toneStage.reset();
 }
 
 void Compressor2AudioProcessor::releaseResources()
@@ -223,24 +221,24 @@ void Compressor2AudioProcessor::releaseResources()
 #ifndef JucePlugin_PreferredChannelConfigurations
 bool Compressor2AudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 {
-  #if JucePlugin_IsMidiEffect
+#if JucePlugin_IsMidiEffect
     ignoreUnused (layouts);
     return true;
-  #else
+#else
     // This is the place where you check if the layout is supported.
     // In this template code we only support mono or stereo.
     if (layouts.getMainOutputChannelSet() != AudioChannelSet::mono()
-     && layouts.getMainOutputChannelSet() != AudioChannelSet::stereo())
+        && layouts.getMainOutputChannelSet() != AudioChannelSet::stereo())
         return false;
-
+    
     // This checks if the input layout matches the output layout
-   #if ! JucePlugin_IsSynth
+#if ! JucePlugin_IsSynth
     if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
         return false;
-   #endif
-
+#endif
+    
     return true;
-  #endif
+#endif
 }
 #endif
 
@@ -255,7 +253,7 @@ void Compressor2AudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuf
     float currentThreshold = threshold->get();
     float currentRatio = ratio->get();
     float currentGain = makeupGain->get();
-
+    
     // In case we have more outputs than inputs, this code clears any output
     // channels that didn't contain input data, (because these aren't
     // guaranteed to be empty - they may contain garbage).
@@ -264,71 +262,86 @@ void Compressor2AudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuf
     // this code if your algorithm always overwrites all the output channels.
     for (int i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
-
+    
+    
+    //Change waveshapers based on tone selection
     switch ((int) tone->get()) {
         case 0:
         {
-            for (int channel = 0; channel < totalNumInputChannels; ++channel)
-            {
-                float* channelData = buffer.getWritePointer (channel);
-                
-                for(int sample=0; sample < buffer.getNumSamples(); ++sample){
-                    currentSample = channelData[sample];
-                    //take channelData and treat as "data"-one sample. Increment the pointer when time to process next sample
-                    controlSignal = currentSample;
-                    //linear to DB conversion
-                    linTodB(controlSignal);
-                    //gain computing
-                    gainComputerOut = computeGainCorrection(controlSignal,currentThreshold,currentRatio);
-                    controlSignal = controlSignal-gainComputerOut;
-                    //dBToLin(controlSignal);
-                    
-                    //level detection
-                    levelDetectorOut = computeLevelDetection(controlSignal,previousSamples[channel],attackConstant,releaseConstant);
-                    previousSamples[channel] = levelDetectorOut;
-                    //send control signal reduction to meter
-                    currentLevel->operator[](channel)->setValue(levelDetectorOut);
-                    //Compute control signal from applied gain and level detector signal
-                    controlSignal = (currentGain)-levelDetectorOut;
-                    //db to linear conversion
-                    dBToLin(controlSignal);
-                    //set sample to equal new sample
-                    computedSample = currentSample*controlSignal;
-                    channelData[sample] = computedSample;
-                }
-            }
+                                auto& gainUp = toneStage.get<0>();
+                                gainUp.setGainDecibels (3);
+            
+                                //auto& bias = toneStage.get<1>();
+                                //bias.setBias (0.4f);
+            
+                                auto& wavShaper = toneStage.get<2>();
+                                wavShaper.functionToUse = std::tanh;
+            
+                                auto& dcFilter = toneStage.get<3>();
+                                dcFilter.state = dsp::IIR::Coefficients<float>::makeHighPass (globalSpec.sampleRate, 5.0);
+            
+                                auto& gainDown = toneStage.get<4>();
+                                gainDown.setGainDecibels (-3.0f);
+            
+            
             break;
         }
             
         case 1:
         {
-            AudioSampleBuffer resampleBuffer;
-            resampleBuffer.setSize (getTotalNumInputChannels(), buffer.getNumSamples() * 4);
-            for (int channel = 0; channel < totalNumInputChannels; ++channel)
-            {
-                LagrangeInterpolator* overSampler = new LagrangeInterpolator();
-                float* resampleWriter = resampleBuffer.getWritePointer(channel);
-                float* channelData = buffer.getWritePointer (channel);
-                
-                overSampler->process(0.25, channelData, resampleWriter, buffer.getNumSamples()*4);
-                
-                for(int sample=0; sample < buffer.getNumSamples(); ++sample){
-                    channelData[sample] = gainStage(channelData[sample]);
-                    
-                }
-            }
             break;
         }
             
         case 2:
+        {
             break;
+        }
         default:
+        {
+            
             break;
+        }
     }
     
-    //Post Processing Low Pass Filter
-    dsp::AudioBlock<float> block (buffer);
-    //fir.process (dsp::ProcessContextReplacing<float> (block));
+    
+    //Process buffer through tone distortion before compressing
+    toneStage.prepare (globalSpec);
+    AudioBlock<float> block (buffer);
+    toneStage.process((const ProcessContextReplacing<float>&) block);
+
+    
+    
+    //Run resultant sound through compression
+    for (int channel = 0; channel < totalNumInputChannels; ++channel)
+    {
+        float* channelData = buffer.getWritePointer (channel);
+        //float* channgeData = block.getChannelPointer(channel);
+        
+        for(int sample=0; sample < buffer.getNumSamples(); ++sample){
+            currentSample = channelData[sample];
+            //take channelData and treat as "data"-one sample. Increment the pointer when time to process next sample
+            controlSignal = currentSample;
+            //linear to DB conversion
+            linTodB(controlSignal);
+            //gain computing
+            gainComputerOut = computeGainCorrection(controlSignal,currentThreshold,currentRatio);
+            controlSignal = controlSignal-gainComputerOut;
+            //dBToLin(controlSignal);
+            
+            //level detection
+            levelDetectorOut = computeLevelDetection(controlSignal,previousSamples[channel],attackConstant,releaseConstant);
+            previousSamples[channel] = levelDetectorOut;
+            //send control signal reduction to meter
+            currentLevel->operator[](channel)->setValue(levelDetectorOut);
+            //Compute control signal from applied gain and level detector signal
+            controlSignal = (currentGain)-levelDetectorOut;
+            //db to linear conversion
+            dBToLin(controlSignal);
+            //set sample to equal new sample
+            computedSample = currentSample*controlSignal;
+            channelData[sample] = computedSample;
+        }
+    }
 }
 
 //Getters and Setters

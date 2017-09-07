@@ -12,6 +12,8 @@
 
 #include "../JuceLibraryCode/JuceHeader.h"
 
+using namespace dsp;
+
 
 //==============================================================================
 /**
@@ -56,7 +58,6 @@ public:
     void getStateInformation (MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
     OwnedArray<Value>* getVolumeLevel();
-    const float* currentSamples;
     
 
 private:
@@ -86,7 +87,9 @@ private:
     //metering
     OwnedArray<Value>* currentLevel;  //Pointer to value to be used as an array of values with set number of channels
     
-    dsp::ProcessorDuplicator<dsp::FIR::Filter<float>, dsp::FIR::Coefficients<float>> fir;
+    ProcessorChain<Gain<float>, Bias<float>, WaveShaper<float>, ProcessorDuplicator<IIR::Filter<float>, IIR::Coefficients<float>>, Gain<float>> toneStage;
+    
+    ProcessSpec globalSpec;
     
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Compressor2AudioProcessor)

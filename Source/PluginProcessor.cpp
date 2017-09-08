@@ -273,6 +273,52 @@ void Compressor2AudioProcessor::prepareToPlay (double sampleRate, int samplesPer
     globalSpec.operator=({sampleRate, static_cast<uint32> (samplesPerBlock), channels});
     //globalSpec.operator=({sampleRate*4, static_cast<uint32> (samplesPerBlock*4), channels});
     
+    
+    
+    
+    //---SETUP DRIVE (tone) SPECS--//
+    
+    //input gain
+    auto& gainUp = toneStage.get<0>();
+    gainUp.setGainDecibels (drive->get());//refactor to use drive control
+    
+    //anti-imaging filter
+    auto& antiImagingFilter = toneStage.get<1>();
+    antiImagingFilter.state = FilterDesign<float>::designFIRLowpassWindowMethod (20000.0f, globalSpec.sampleRate, 21, WindowingFunction<float>::blackman);
+    
+    //tone selected waveshaper curve
+    auto& wavShaper = toneStage.get<2>();
+    switch ((int) tone->get()) {
+        case 0:
+        {
+            wavShaper.functionToUse = tone0Function;
+            break;
+        }
+        case 1:
+        {
+            wavShaper.functionToUse = tone1Function;
+            break;
+        }
+        case 2:
+        {
+            wavShaper.functionToUse = tone2Function;
+            break;
+        }
+        default:
+        {break;}
+    }
+    
+    //anti-aliasing filter
+    auto& antiAliasingFilter = toneStage.get<3>();
+    antiAliasingFilter.state = FilterDesign<float>::designFIRLowpassWindowMethod (20000.0f, globalSpec.sampleRate, 21, WindowingFunction<float>::blackman);
+    
+    //output gain
+    auto& gainDown = toneStage.get<4>();
+    gainDown.setGainDecibels (-(drive->get()));//refactor to use drive control
+    
+    //Process buffer through tone distortion before compressing
+    toneStage.prepare (globalSpec);
+    
 }
 
 void Compressor2AudioProcessor::reset()
@@ -327,18 +373,11 @@ void Compressor2AudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuf
     
     
     
-    
-    
-    
-    //---SETUP DRIVE (tone) SPECS--//
+    //---DUPLICATE DRIVE SPECS FROM prepareToPlay() for real-time modification--//
     
     //input gain
     auto& gainUp = toneStage.get<0>();
     gainUp.setGainDecibels (drive->get());//refactor to use drive control
-    
-    //anti-imaging filter
-    auto& antiImagingFilter = toneStage.get<1>();
-    antiImagingFilter.state = dsp::IIR::Coefficients<float>::makeLowPass ((globalSpec.sampleRate), 20000.0);
     
     //tone selected waveshaper curve
     auto& wavShaper = toneStage.get<2>();
@@ -362,17 +401,11 @@ void Compressor2AudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuf
         {break;}
     }
     
-    //anti-aliasing filter
-    auto& antiAliasingFilter = toneStage.get<3>();
-    antiAliasingFilter.state = dsp::IIR::Coefficients<float>::makeLowPass ((globalSpec.sampleRate), 20000.0);
-    
     //output gain
     auto& gainDown = toneStage.get<4>();
     gainDown.setGainDecibels (-(drive->get()));//refactor to use drive control
     
-    //Process buffer through tone distortion before compressing
-    toneStage.prepare (globalSpec);
-    
+
     
     
     

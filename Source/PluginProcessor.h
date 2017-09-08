@@ -88,7 +88,7 @@ private:
     //metering
     OwnedArray<Value>* currentLevel;  //Pointer to value to be used as an array of values with set number of channels
     
-    ProcessorChain<Gain<float>, ProcessorDuplicator<IIR::Filter<float>, IIR::Coefficients<float>>, WaveShaper<float>, ProcessorDuplicator<IIR::Filter<float>, IIR::Coefficients<float>>, Gain<float>> toneStage;
+    ProcessorChain<Gain<float>,ProcessorDuplicator<FIR::Filter<float>, FIR::Coefficients<float>>, WaveShaper<float>, ProcessorDuplicator<FIR::Filter<float>, FIR::Coefficients<float>>, Gain<float>> toneStage;
     
     ProcessSpec globalSpec;
     

@@ -69,6 +69,7 @@ private:
     AudioParameterFloat* releaseTime;
     AudioParameterFloat* ratio;
     AudioParameterFloat* tone;
+    AudioParameterFloat* drive;
     //intermediate values
     float currentSample;
     float gainComputerOut;

@@ -84,31 +84,11 @@ void Compressor2AudioProcessorEditor::createControl(const AudioProcessorParamete
     switch (parameterNumber) {
         case 0:
         {
-           //ratio parameter
-            newSlider->setRange (floatParam->range.start, floatParam->range.end,2);
+            //drive parameter
+            newSlider->setRange (floatParam->range.start, floatParam->range.end,1);
             break;
         }
         case 1:
-        {
-            //threshold parameter
-            newSlider->setRange (floatParam->range.start, floatParam->range.end,1);
-            break;
-        }
-        case 2:
-        {
-            //attack parameter
-            newSlider->setRange (floatParam->range.start, floatParam->range.end,1);
-            newSlider->setSkewFactor(0.7);
-            break;
-        }
-        case 3:
-        {
-            //release parameter
-            newSlider->setRange (floatParam->range.start, floatParam->range.end,1);
-            newSlider->setSkewFactor(0.7);
-            break;
-        }
-        case 4:
         {
             //tone parameter
             newSlider->setSliderStyle(Slider::LinearHorizontal);
@@ -118,7 +98,33 @@ void Compressor2AudioProcessorEditor::createControl(const AudioProcessorParamete
             parameterHeight = parameterHeight-toneSliderOffset;
             break;
         }
+        case 2:
+        {
+            //ratio parameter
+            newSlider->setRange (floatParam->range.start, floatParam->range.end,2);
+            break;
+        }
+        case 3:
+        {
+            //threshold parameter
+            newSlider->setRange (floatParam->range.start, floatParam->range.end,1);
+            break;
+        }
+        case 4:
+        {
+            //attack parameter
+            newSlider->setRange (floatParam->range.start, floatParam->range.end,1);
+            newSlider->setSkewFactor(0.7);
+            break;
+        }
         case 5:
+        {
+            //release parameter
+            newSlider->setRange (floatParam->range.start, floatParam->range.end,1);
+            newSlider->setSkewFactor(0.7);
+            break;
+        }
+        case 6:
         {
             //makeupGain parameter
             newSlider->setRange (floatParam->range.start, floatParam->range.end,1);

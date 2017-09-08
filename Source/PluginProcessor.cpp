@@ -23,6 +23,12 @@ Compressor2AudioProcessor::Compressor2AudioProcessor()
     
     
     //Create Parameters
+    addParameter (drive = new AudioParameterFloat ("drive", // parameterID
+                                                   "Drive", // parameter name
+                                                   0,   // mininum value
+                                                   20,   // maximum value
+                                                   0)); // default value
+    addParameter (tone = new AudioParameterFloat("tone","Tone",0,2,0));
     addParameter (ratio = new AudioParameterFloat ("ratio", // parameterID
                                                    "Ratio", // parameter name
                                                    2,   // mininum value
@@ -43,7 +49,7 @@ Compressor2AudioProcessor::Compressor2AudioProcessor()
                                                          10,   // mininum value
                                                          1000,   // maximum value
                                                          10)); // default value
-    addParameter (tone = new AudioParameterFloat("tone","Tone",0,2,0));
+    
     addParameter (makeupGain = new AudioParameterFloat ("gain", // parameterID
                                                         "Makeup Gain", // parameter name
                                                         -10,   // mininum value
@@ -328,7 +334,7 @@ void Compressor2AudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuf
     
     //input gain
     auto& gainUp = toneStage.get<0>();
-    gainUp.setGainDecibels (10);//refactor to use drive control
+    gainUp.setGainDecibels (drive->get());//refactor to use drive control
     
     //anti-imaging filter
     auto& antiImagingFilter = toneStage.get<1>();
@@ -362,7 +368,7 @@ void Compressor2AudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuf
     
     //output gain
     auto& gainDown = toneStage.get<4>();
-    gainDown.setGainDecibels (-10.0f);//refactor to use drive control
+    gainDown.setGainDecibels (-(drive->get()));//refactor to use drive control
     
     //Process buffer through tone distortion before compressing
     toneStage.prepare (globalSpec);

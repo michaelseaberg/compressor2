@@ -32,7 +32,8 @@ public:
 private:
     Compressor2AudioProcessor& processor;
     const int width = 270;
-    const int height = 585;
+    //const int height = 585;
+    const int height = 700;
     const int parameterOffset = 30;
     const int parameterSize = 80;
     const int labelWidth = 120;

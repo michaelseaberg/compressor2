@@ -160,6 +160,67 @@ float computeLevelDetection(float sample, float previousSample, float attackCons
         return (releaseConstant*previousSample)+((1-releaseConstant)*sample);
 }
 
+static float tone0Function(float inputSample) {
+    float outputSample;
+    float threshold1 = 1.0f/3.0f;
+    float threshold2 = 2.0f/3.0f;
+    
+    if(inputSample > threshold2)
+        outputSample = 1.0f;
+    else if(inputSample > threshold1)
+        outputSample = (3.0f - (2.0f - 3.0f*inputSample) *
+                        (2.0f - 3.0f*inputSample))/3.0f;
+    else if(inputSample < -threshold2)
+        outputSample = -1.0f;
+    else if(inputSample < -threshold1)
+        outputSample = -(3.0f - (2.0f + 3.0f*inputSample) *
+                         (2.0f + 3.0f*inputSample))/3.0f;
+    else
+        outputSample = 2.0f* inputSample;
+    
+    return outputSample;
+}
+static float tone1Function(float inputSample) {
+    float outputSample;
+    float threshold1 = 1.0f/3.0f;
+    float threshold2 = 2.0f/3.0f;
+    
+    if(inputSample > threshold2)
+        outputSample = 1.0f;
+    else if(inputSample > threshold1)
+        outputSample = (3.0f - (2.0f - 3.0f*inputSample) *
+                        (2.0f - 3.0f*inputSample))/3.0f;
+    else if(inputSample < -threshold2)
+        outputSample = -1.0f;
+    else if(inputSample < -threshold1)
+        outputSample = -(3.0f - (2.0f + 3.0f*inputSample) *
+                         (2.0f + 3.0f*inputSample))/3.0f;
+    else
+        outputSample = 2.0f* inputSample;
+    
+    return outputSample;
+}
+static float tone2Function(float inputSample) {
+    float outputSample;
+    float threshold1 = 1.0f/3.0f;
+    float threshold2 = 2.0f/3.0f;
+    
+    if(inputSample > threshold2)
+        outputSample = 1.0f;
+    else if(inputSample > threshold1)
+        outputSample = (3.0f - (2.0f - 3.0f*inputSample) *
+                        (2.0f - 3.0f*inputSample))/3.0f;
+    else if(inputSample < -threshold2)
+        outputSample = -1.0f;
+    else if(inputSample < -threshold1)
+        outputSample = -(3.0f - (2.0f + 3.0f*inputSample) *
+                         (2.0f + 3.0f*inputSample))/3.0f;
+    else
+        outputSample = 2.0f* inputSample;
+    
+    return outputSample;
+}
+
 //Input Gain Stage - Distortion
 //==============================================================================
 float Compressor2AudioProcessor::gainStage(float inputSample){
@@ -204,6 +265,7 @@ void Compressor2AudioProcessor::prepareToPlay (double sampleRate, int samplesPer
     //Setup post processing filter
     auto channels = static_cast<uint32> (jmin (getMainBusNumInputChannels(), getMainBusNumOutputChannels()));
     globalSpec.operator=({sampleRate, static_cast<uint32> (samplesPerBlock), channels});
+    //globalSpec.operator=({sampleRate*4, static_cast<uint32> (samplesPerBlock*4), channels});
     
 }
 
@@ -254,61 +316,89 @@ void Compressor2AudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuf
     float currentRatio = ratio->get();
     float currentGain = makeupGain->get();
     
-    // In case we have more outputs than inputs, this code clears any output
-    // channels that didn't contain input data, (because these aren't
-    // guaranteed to be empty - they may contain garbage).
-    // This is here to avoid people getting screaming feedback
-    // when they first compile a plugin, but obviously you don't need to keep
-    // this code if your algorithm always overwrites all the output channels.
     for (int i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
     
     
-    //Change waveshapers based on tone selection
+    
+    
+    
+    
+    //---SETUP DRIVE (tone) SPECS--//
+    
+    //input gain
+    auto& gainUp = toneStage.get<0>();
+    gainUp.setGainDecibels (10);//refactor to use drive control
+    
+    //anti-imaging filter
+    auto& antiImagingFilter = toneStage.get<1>();
+    antiImagingFilter.state = dsp::IIR::Coefficients<float>::makeLowPass ((globalSpec.sampleRate), 20000.0);
+    
+    //tone selected waveshaper curve
+    auto& wavShaper = toneStage.get<2>();
     switch ((int) tone->get()) {
         case 0:
         {
-                                auto& gainUp = toneStage.get<0>();
-                                gainUp.setGainDecibels (3);
-            
-                                //auto& bias = toneStage.get<1>();
-                                //bias.setBias (0.4f);
-            
-                                auto& wavShaper = toneStage.get<2>();
-                                wavShaper.functionToUse = std::tanh;
-            
-                                auto& dcFilter = toneStage.get<3>();
-                                dcFilter.state = dsp::IIR::Coefficients<float>::makeHighPass (globalSpec.sampleRate, 5.0);
-            
-                                auto& gainDown = toneStage.get<4>();
-                                gainDown.setGainDecibels (-3.0f);
-            
-            
+            wavShaper.functionToUse = tone0Function;
             break;
         }
-            
         case 1:
         {
+            wavShaper.functionToUse = tone1Function;
             break;
         }
-            
         case 2:
         {
+            wavShaper.functionToUse = tone2Function;
             break;
         }
         default:
-        {
-            
-            break;
-        }
+        {break;}
     }
     
+    //anti-aliasing filter
+    auto& antiAliasingFilter = toneStage.get<3>();
+    antiAliasingFilter.state = dsp::IIR::Coefficients<float>::makeLowPass ((globalSpec.sampleRate), 20000.0);
+    
+    //output gain
+    auto& gainDown = toneStage.get<4>();
+    gainDown.setGainDecibels (-10.0f);//refactor to use drive control
     
     //Process buffer through tone distortion before compressing
     toneStage.prepare (globalSpec);
+    
+    
+    
+    
+    //Initialize buffer for oversampling
+    AudioSampleBuffer distortionBuffer = AudioSampleBuffer();
+    distortionBuffer.setSize(totalNumInputChannels, buffer.getNumSamples()*4);
+    
+    //Upsample for better resolution
+//    for(int channel=0; channel<totalNumInputChannels;channel++){
+//        float* tempWrite = distortionBuffer.getWritePointer(channel);
+//        const float* tempRead = buffer.getReadPointer(channel);
+//        for(int sample=0; sample<buffer.getNumSamples(); sample++){
+//            tempWrite[sample*4] = tempRead[sample];
+//        }
+//        
+//    }
+    
     AudioBlock<float> block (buffer);
     toneStage.process((const ProcessContextReplacing<float>&) block);
 
+    //Decimate for Compression
+//    for(int channel=0; channel<totalNumInputChannels;channel++){
+//        float* tempWrite = buffer.getWritePointer(channel);
+//        const float* tempRead = distortionBuffer.getReadPointer(channel);
+//        for(int sample=0; sample<buffer.getNumSamples(); sample++){
+//            tempWrite[sample] = tempRead[sample*4];
+//        }
+//        
+//    }
+    
+    
+    
     
     
     //Run resultant sound through compression

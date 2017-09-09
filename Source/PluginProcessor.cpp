@@ -188,43 +188,19 @@ static float tone0Function(float inputSample) {
 }
 static float tone1Function(float inputSample) {
     float outputSample;
-    float threshold1 = 1.0f/3.0f;
-    float threshold2 = 2.0f/3.0f;
+    float threshold1 = 0.3f;
     
-    if(inputSample > threshold2)
-        outputSample = 1.0f;
-    else if(inputSample > threshold1)
-        outputSample = (3.0f - (2.0f - 3.0f*inputSample) *
-                        (2.0f - 3.0f*inputSample))/3.0f;
-    else if(inputSample < -threshold2)
-        outputSample = -1.0f;
+    if(inputSample > threshold1)
+        outputSample = (sqrt(inputSample)/(inputSample+1))+0.5;
     else if(inputSample < -threshold1)
-        outputSample = -(3.0f - (2.0f + 3.0f*inputSample) *
-                         (2.0f + 3.0f*inputSample))/3.0f;
+        outputSample = -(sqrt(fabs(inputSample))/(fabs(inputSample)+1))-0.5;
     else
-        outputSample = 2.0f* inputSample;
+        outputSample = (((sqrt(threshold1)/(threshold1+1))+0.5)/threshold1)*inputSample;
     
     return outputSample;
 }
 static float tone2Function(float inputSample) {
-    float outputSample;
-    float threshold1 = 1.0f/3.0f;
-    float threshold2 = 2.0f/3.0f;
-    
-    if(inputSample > threshold2)
-        outputSample = 1.0f;
-    else if(inputSample > threshold1)
-        outputSample = (3.0f - (2.0f - 3.0f*inputSample) *
-                        (2.0f - 3.0f*inputSample))/3.0f;
-    else if(inputSample < -threshold2)
-        outputSample = -1.0f;
-    else if(inputSample < -threshold1)
-        outputSample = -(3.0f - (2.0f + 3.0f*inputSample) *
-                         (2.0f + 3.0f*inputSample))/3.0f;
-    else
-        outputSample = 2.0f* inputSample;
-    
-    return outputSample;
+    return ((3*inputSample)/2)*(1-(powf(inputSample,2.0f)/3));
 }
 
 //Input Gain Stage - Distortion

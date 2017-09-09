@@ -258,6 +258,7 @@ float Compressor2AudioProcessor::gainStage(float inputSample){
 //==============================================================================
 void Compressor2AudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
+    //---REINITIALIZE COMPRESSOR VALUES---//
     currentSample = 0;
     previousSamples[0] = 0;
     previousSamples[1] = 0;
@@ -268,16 +269,13 @@ void Compressor2AudioProcessor::prepareToPlay (double sampleRate, int samplesPer
     attackConstant = 0;
     releaseConstant = 0;
     
-    //Setup post processing filter
+    
+    //---INITIALIZE toneStage SPEC---//
     auto channels = static_cast<uint32> (jmin (getMainBusNumInputChannels(), getMainBusNumOutputChannels()));
-    globalSpec.operator=({sampleRate, static_cast<uint32> (samplesPerBlock), channels});
-    //globalSpec.operator=({sampleRate*4, static_cast<uint32> (samplesPerBlock*4), channels});
+    globalSpec.operator=({sampleRate*4, static_cast<uint32> (samplesPerBlock*4), channels});
     
     
-    
-    
-    //---SETUP DRIVE (tone) SPECS--//
-    
+    //---SETUP DRIVE (tone) PROCESSORS--//
     //input gain
     auto& gainUp = toneStage.get<0>();
     gainUp.setGainDecibels (drive->get());//refactor to use drive control
@@ -318,6 +316,14 @@ void Compressor2AudioProcessor::prepareToPlay (double sampleRate, int samplesPer
     
     //Process buffer through tone distortion before compressing
     toneStage.prepare (globalSpec);
+    
+    
+    //---SETUP RESAMPLERS---//
+    resamplingInterpolators = new OwnedArray<LagrangeInterpolator>;
+    for(int i=0; i<getTotalNumInputChannels()*2;i++){
+        resamplingInterpolators->add(new LagrangeInterpolator());
+    }
+    
     
 }
 
@@ -361,19 +367,16 @@ void Compressor2AudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuf
     const int totalNumInputChannels  = getTotalNumInputChannels();
     const int totalNumOutputChannels = getTotalNumOutputChannels();
     
-    attackConstant = computeConstant(attackTime->get(),this->getSampleRate());
-    releaseConstant = computeConstant(releaseTime->get(),this->getSampleRate());
-    //inputGainLinear = powf(10.0f, ((inputGain->get())/20.0f));
-    float currentThreshold = threshold->get();
-    float currentRatio = ratio->get();
-    float currentGain = makeupGain->get();
-    
     for (int i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
     
     
-    
-    //---DUPLICATE DRIVE SPECS FROM prepareToPlay() for real-time modification--//
+    //---UPDATE PARAMETERS---//
+    attackConstant = computeConstant(attackTime->get(),this->getSampleRate());
+    releaseConstant = computeConstant(releaseTime->get(),this->getSampleRate());
+    float currentThreshold = threshold->get();
+    float currentRatio = ratio->get();
+    float currentGain = makeupGain->get();
     
     //input gain
     auto& gainUp = toneStage.get<0>();
@@ -406,41 +409,26 @@ void Compressor2AudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuf
     gainDown.setGainDecibels (-(drive->get()));//refactor to use drive control
     
 
-    
-    
-    
+    //---DISTORTION---//
     //Initialize buffer for oversampling
     AudioSampleBuffer distortionBuffer = AudioSampleBuffer();
     distortionBuffer.setSize(totalNumInputChannels, buffer.getNumSamples()*4);
     
     //Upsample for better resolution
-//    for(int channel=0; channel<totalNumInputChannels;channel++){
-//        float* tempWrite = distortionBuffer.getWritePointer(channel);
-//        const float* tempRead = buffer.getReadPointer(channel);
-//        for(int sample=0; sample<buffer.getNumSamples(); sample++){
-//            tempWrite[sample*4] = tempRead[sample];
-//        }
-//        
-//    }
+    for(int channel=0; channel<totalNumInputChannels;channel++){
+        resamplingInterpolators->operator[](channel)->process(0.25, buffer.getReadPointer(channel), distortionBuffer.getWritePointer(channel), distortionBuffer.getNumSamples());
+    }
     
-    AudioBlock<float> block (buffer);
+    AudioBlock<float> block (distortionBuffer);
     toneStage.process((const ProcessContextReplacing<float>&) block);
 
     //Decimate for Compression
-//    for(int channel=0; channel<totalNumInputChannels;channel++){
-//        float* tempWrite = buffer.getWritePointer(channel);
-//        const float* tempRead = distortionBuffer.getReadPointer(channel);
-//        for(int sample=0; sample<buffer.getNumSamples(); sample++){
-//            tempWrite[sample] = tempRead[sample*4];
-//        }
-//        
-//    }
+    for(int channel=0; channel<totalNumInputChannels;channel++){
+        resamplingInterpolators->operator[](channel+totalNumInputChannels)->process(4, distortionBuffer.getReadPointer(channel), buffer.getWritePointer(channel), buffer.getNumSamples());
+    }
     
     
-    
-    
-    
-    //Run resultant sound through compression
+    //---COMPRESSION---///
     for (int channel = 0; channel < totalNumInputChannels; ++channel)
     {
         float* channelData = buffer.getWritePointer (channel);
@@ -484,7 +472,7 @@ OwnedArray<Value>* Compressor2AudioProcessor::getVolumeLevel(){
 //==============================================================================
 bool Compressor2AudioProcessor::hasEditor() const
 {
-    return true; // (change this to false if you choose to not supply an editor)
+    return true;
 }
 
 AudioProcessorEditor* Compressor2AudioProcessor::createEditor()

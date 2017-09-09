@@ -91,6 +91,7 @@ private:
     ProcessorChain<Gain<float>,ProcessorDuplicator<FIR::Filter<float>, FIR::Coefficients<float>>, WaveShaper<float>, ProcessorDuplicator<FIR::Filter<float>, FIR::Coefficients<float>>, Gain<float>> toneStage;
     
     ProcessSpec globalSpec;
+    OwnedArray<LagrangeInterpolator>* resamplingInterpolators;
     
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Compressor2AudioProcessor)
